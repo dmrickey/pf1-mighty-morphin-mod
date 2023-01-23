@@ -39,6 +39,7 @@ export class MightyMorphinApp {
      */
     static async reducePerson() { await reducePerson(); }
 
+    // todo add buff name as optional arg to revert specific buff
     /**
      * Reverts changes applied by this module to the selected actor
      */
