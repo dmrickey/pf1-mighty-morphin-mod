@@ -8,7 +8,7 @@ export const enlargePerson = async () => {
     // Only continue if a single actor and it is not already under any effects provided by this module
     if (!!shifter && !shifter.data.flags.mightyMorphin) {
         let buff = shifter.items.find(o => o.type === 'buff' && o.name === 'Enlarge Person');
-        let shifterSize = shifter.data.data.traits.size;
+        let shifterSize = shifter.system.traits.size;
 
         // Find the size the number of steps away from current, number of steps provided by changeData
         let newSize = getNewSize(shifterSize, changeData.size);
@@ -40,7 +40,7 @@ export const enlargePerson = async () => {
             await buffAdded[0].update({ 'img': 'systems/pf1/icons/skills/yellow_14.jpg', 'data.changes': changes, 'data.active': true });
         }
         else {
-            let oldChanges = buff.data.data.changes;
+            let oldChanges = buff.system.changes;
             let newChanges = [];
 
             let strChange = 0;
@@ -63,11 +63,11 @@ export const enlargePerson = async () => {
         let armorToChange = [];
         // Double armor and shield AC when moving from tiny to small (tiny and below armor AC is half normal)
         if (shifterSize === 'tiny') {
-            let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.data.data.equipmentType === 'armor' || o.data.data.equipmentType === 'shield'));
+            let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.system.equipmentType === 'armor' || o.system.equipmentType === 'shield'));
 
             for (let item of armorAndShields) {
-                armorChangeFlag.push({ _id: item.id, data: { armor: { value: item.data.data.armor.value } } }); // store original armor data in flags
-                armorToChange.push({ _id: item.id, data: { armor: { value: (item.data.data.armor.value * 2) } } }); // change to push to actor's item
+                armorChangeFlag.push({ _id: item.id, data: { armor: { value: item.system.armor.value } } }); // store original armor data in flags
+                armorToChange.push({ _id: item.id, data: { armor: { value: (item.system.armor.value * 2) } } }); // change to push to actor's item
             }
         }
 
@@ -77,7 +77,7 @@ export const enlargePerson = async () => {
         }
 
         // Update the actor size and store flags
-        await shifter.update({ 'data.traits.size': newSize, 'flags.mightyMorphin': { source: 'Enlarge Person', buffName: 'Enlarge Person', size: shifterSize, armor: armorChangeFlag } });
+        await shifter.update({ 'system.traits.size': newSize, 'flags.mightyMorphin': { source: 'Enlarge Person', buffName: 'Enlarge Person', size: shifterSize, armor: armorChangeFlag } });
     }
     else if (!!shifter?.data.flags.mightyMorphin) {
         ui.notifications.warn(shifter.name + ' is already under the effects of a change from ' + shifter.data.flags.mightyMorphin.source);

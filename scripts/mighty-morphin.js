@@ -68,10 +68,10 @@ export class MightyMorphinApp {
 
                 // Revert all actor data to its original and remove the flags
                 if (!!changes.data) {
-                    await shifter.update({ 'data': changes.data, 'data.traits.size': changes.size, 'flags.-=mightyMorphin': null });
+                    await shifter.update({ 'system': changes.system, 'system.traits.size': changes.size, 'flags.-=mightyMorphin': null });
                 }
                 else {
-                    await shifter.update({ 'data.traits.size': changes.size, 'flags.-=mightyMorphin': null });
+                    await shifter.update({ 'system.traits.size': changes.size, 'flags.-=mightyMorphin': null });
                 }
                 // Turn off the buff
                 await shifter.items.find(o => o.type === 'buff' && o.name === changes.buffName).update({ 'data.active': false });
@@ -100,10 +100,10 @@ export class MightyMorphinApp {
                 // Revert all data that was replaced to its original and remove the flags
                 let updates = {};
                 if (!!changes.data.token) {
-                    updates = { data: changes.data.data, token: changes.data.token, 'flags.-=mightyMorphin': null };
+                    updates = { data: changes.system, token: changes.data.token, 'flags.-=mightyMorphin': null };
                 }
                 else {
-                    updates = { data: changes.data.data, 'flags.-=mightyMorphin': null };
+                    updates = { data: changes.system, 'flags.-=mightyMorphin': null };
                 }
 
                 await shifter.update(updates);

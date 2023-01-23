@@ -8,7 +8,7 @@ export const frightfulAspect = async (cl = 0) => {
     // Only continue if a single actor and it is not already under any effects provided by this module
     if (!!shifter && !shifter.data.flags.mightyMorphin) {
         let buff = shifter.items.find(o => o.type === 'buff' && o.name === 'Frightful Aspect');
-        let shifterSize = shifter.data.data.traits.size;
+        let shifterSize = shifter.system.traits.size;
 
         let newSize = changeData.size;
 
@@ -45,7 +45,7 @@ export const frightfulAspect = async (cl = 0) => {
             await buffAdded[0].update({ 'img': 'systems/pf1/icons/skills/affliction_08.jpg', 'data.changes': changes, 'data.active': true });
         }
         else {
-            let oldChanges = buff.data.data.changes;
+            let oldChanges = buff.system.changes;
             let newChanges = [];
 
             let strChange = 0;
@@ -68,11 +68,11 @@ export const frightfulAspect = async (cl = 0) => {
         let armorToChange = [];
         // Double armor and shield AC when moving from tiny or smaller (tiny and below armor AC is half normal)
         if (isTinyOrSmaller(shifterSize)) {
-            let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.data.data.equipmentType === 'armor' || o.data.data.equipmentType === 'shield'));
+            let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.system.equipmentType === 'armor' || o.system.equipmentType === 'shield'));
 
             for (let item of armorAndShields) {
-                armorChangeFlag.push({ _id: item.id, data: { armor: { value: item.data.data.armor.value } } }); // store original armor data in flags
-                armorToChange.push({ _id: item.id, data: { armor: { value: (item.data.data.armor.value * 2) } } }); // change to push to actor's item
+                armorChangeFlag.push({ _id: item.id, data: { armor: { value: item.system.armor.value } } }); // store original armor data in flags
+                armorToChange.push({ _id: item.id, data: { armor: { value: (item.system.armor.value * 2) } } }); // change to push to actor's item
             }
         }
 
@@ -82,16 +82,16 @@ export const frightfulAspect = async (cl = 0) => {
         }
 
         // Add effect DR to existing (if any), and store old DR
-        let oldDR = shifter.data.data.traits.dr;
+        let oldDR = shifter.system.traits.dr;
         let newDR = (!!oldDR ? oldDR + '; ' : '') + '10/magic';
 
         // Replace old spell resistance if new is higher, store old
-        let oldSR = shifter.data.data.attributes.sr.formula;
+        let oldSR = shifter.system.attributes.sr.formula;
         let faSR = 10 + Math.floor(parseInt(casterLevel) / 2);
-        let newSR = shifter.data.data.attributes.sr.total > faSR ? oldSR : faSR;
+        let newSR = shifter.system.attributes.sr.total > faSR ? oldSR : faSR;
 
         // Update the actor data and store flags
-        await shifter.update({ 'data.traits.size': newSize, 'data.traits.dr': newDR, 'data.attributes.sr.formula': `${newSR}`, 'flags.mightyMorphin': { source: 'Frightful Aspect', buffName: 'Frightful Aspect', size: shifterSize, armor: armorChangeFlag, data: { traits: { dr: oldDR }, attributes: { sr: { formula: oldSR } } } } });
+        await shifter.update({ 'system.traits.size': newSize, 'system.traits.dr': newDR, 'system.attributes.sr.formula': `${newSR}`, 'flags.mightyMorphin': { source: 'Frightful Aspect', buffName: 'Frightful Aspect', size: shifterSize, armor: armorChangeFlag, data: { traits: { dr: oldDR }, attributes: { sr: { formula: oldSR } } } } });
     }
     else if (!!shifter?.data.flags.mightyMorphin) {
         ui.notifications.warn(shifter.name + ' is already under the effects of a change from ' + shifter.data.flags.mightyMorphin.source);

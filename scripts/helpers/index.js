@@ -40,7 +40,7 @@ export const getSingleActor = () => {
  * 
  * @param {string} currentSize The actor's current size
  * @param {number} mod The number of steps to change size, positive for up in size, negative for down in size
- * @returns {string} size in the pf1 system for use in data.traits.size
+ * @returns {string} size in the pf1 system for use in system.traits.size
  */
 export const getNewSize = (currentSize, mod) => {
     let sizeIndex = sizes.indexOf(currentSize);
@@ -62,9 +62,9 @@ export const getNewSize = (currentSize, mod) => {
 export const generateCapacityChange = (shifter, newSize, strChange) => {
     // Set up adjustments to strength carry bonus and carry multiplier so actor's encumbrance doesn't change
     // Subtract the buff strength change from current carry bonus, decreasing carry strength if buff adds or increasing carry strength if buff subtracts
-    let carryBonusChange = (shifter.data.data.details.carryCapacity.bonus.user || 0) - strChange;
+    let carryBonusChange = (shifter.system.details.carryCapacity.bonus.user || 0) - strChange;
     // Counteract the size change's natural increase or decrease to carry multiplier
-    let carryMultChange = (shifter.data.data.details.carryCapacity.multiplier.total * CONFIG.PF1.encumbranceMultipliers.normal[shifter.data.data.traits.size] / CONFIG.PF1.encumbranceMultipliers.normal[newSize]) - shifter.data.data.details.carryCapacity.multiplier.total;
+    let carryMultChange = (shifter.system.details.carryCapacity.multiplier.total * CONFIG.PF1.encumbranceMultipliers.normal[shifter.system.traits.size] / CONFIG.PF1.encumbranceMultipliers.normal[newSize]) - shifter.system.details.carryCapacity.multiplier.total;
     let changes = [
         { formula: carryBonusChange.toString(), operator: 'add', subTarget: 'carryStr', modifier: 'untyped', priority: 0, value: carryBonusChange },
         { formula: carryMultChange.toString(), operator: 'add', subTarget: 'carryMult', modifier: 'untyped', priority: 0, value: carryMultChange }
@@ -93,7 +93,7 @@ const naturalAttacks = {
  * Creates an attack and returns it
  * 
  * @param {string} actorId id of the actor that is changing shape
- * @param {string} formSize The size of the form being changed to in the format matching data.traits.size
+ * @param {string} formSize The size of the form being changed to in the format matching system.traits.size
  * @param {Object} attack Attack object containing name, dice details, attack count, and associated special (e.g. trip) if there is one
  * @param {boolean} onlyAttack True if this will be the only natural attack (providing 1.5x stat to damage)
  * @param {Object} [effects={}] Object containing data for effects that may be associated with special properties of this attack
@@ -182,7 +182,7 @@ export const createAttack = (actorId, formSize, attack, onlyAttack, effects = {}
         subAction.ability.attack = 'dex';
     }
     else {
-        subAction.ability.attack = getProperty(actorData, 'data.attributes.attack.meleeAbility') || 'str';
+        subAction.ability.attack = getProperty(actorData, 'system.attributes.attack.meleeAbility') || 'str';
     }
 
     // ability damage is strength unless it's a ranged attack

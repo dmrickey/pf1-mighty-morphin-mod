@@ -17,7 +17,7 @@ export class MorphinElementalBody extends FormApplication {
         super();
         this.level = level;
         this.actorId = actorId;
-        this.actorSize = game.actors.get(actorId).data.data.traits.size;
+        this.actorSize = game.actors.get(actorId).system.traits.size;
         this.sizes = {};
         this.source = source;
 
@@ -58,19 +58,19 @@ export class MorphinElementalBody extends FormApplication {
 
     /** @inheritdoc */
     async getData() {
-        const data = {};
+        const formData = {};
 
         // Set the default size to the largest available animal (default type)
         let defaultSize = this.sizes.elemental[this.sizes.elemental.length - 1];
-        data.elementalOptions = this.shapeOptions.elemental.filter(o => o.size === defaultSize);
+        formData.elementalOptions = this.shapeOptions.elemental.filter(o => o.size === defaultSize);
         // Create radio button data for elemental sizes, set the one for the default size as the default checked button
-        data.elementalSizes = this.sizes.elemental.map(o => { return o === defaultSize ? { label: o, size: CONFIG.PF1.actorSizes[o], default: true } : { label: o, size: CONFIG.PF1.actorSizes[o] }; });
+        formData.elementalSizes = this.sizes.elemental.map(o => { return o === defaultSize ? { label: o, size: CONFIG.PF1.actorSizes[o], default: true } : { label: o, size: CONFIG.PF1.actorSizes[o] }; });
 
         // Get the elemental that will be the first shown in the form dropdown and build the preview of the changes the form will provide
-        data.defaultChoice = data.elementalOptions[0];
-        data.previewHtml = await this.buildPreviewTemplate(data.defaultChoice.name, 'elemental');
+        formData.defaultChoice = formData.elementalOptions[0];
+        formData.previewHtml = await this.buildPreviewTemplate(formData.defaultChoice.name, 'elemental');
 
-        return data;
+        return formData;
     }
 
     /**
@@ -88,7 +88,7 @@ export class MorphinElementalBody extends FormApplication {
         let oneAttack = MorphinChanges.changes[chosenForm].attacks.length === 1;
 
         // Loop over the attacks and create the items
-        const amuletItem = shifter.items.find(o => o.name.toLowerCase().includes('amulet of mighty fists') && o.data.data.equipped);
+        const amuletItem = shifter.items.find(o => o.name.toLowerCase().includes('amulet of mighty fists') && o.system.equipped);
         let bonusSearch = /\+(\d+)/.exec(amuletItem?.name);
         let amuletBonus = !!bonusSearch ? bonusSearch[1] : null;
         for (let i = 0; i < MorphinChanges.changes[chosenForm].attacks.length; i++) {
@@ -154,21 +154,21 @@ export class MorphinElementalBody extends FormApplication {
         let smallSizes = ['fine', 'dim', 'tiny']; // sizes with half armor AC, also use dex for climb and swim instead of str
         let armorChangeNeeded = (smallSizes.includes(newSize) && !smallSizes.includes(this.actorSize)) || (!smallSizes.includes(newSize) && smallSizes.includes(this.actorSize));
 
-        let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.data.data.equipmentType === 'armor' || o.data.data.equipmentType === 'shield'));
+        let armorAndShields = shifter.items.filter(o => o.data.type === 'equipment' && (o.system.equipmentType === 'armor' || o.system.equipmentType === 'shield'));
 
         // Cycle through all armor and shield items to process them
         for (let item of armorAndShields) {
-            let originalArmor = armorChangeNeeded ? { armor: { value: item.data.data.armor.value } } : {};
+            let originalArmor = armorChangeNeeded ? { armor: { value: item.system.armor.value } } : {};
             // If this is not Wild Shape or it is Wild Shape but the armor isn't Wild enchanted, armor must be removed
             let armorIsWild = item.name.includes('Wild');
-            let originalEquipped = (armorIsWild && this.source === 'Wild Shape') ? {} : { equipped: item.data.data.equipped };
+            let originalEquipped = (armorIsWild && this.source === 'Wild Shape') ? {} : { equipped: item.system.equipped };
             originalArmor = mergeObject(originalArmor, originalEquipped);
 
             if (!!originalArmor) {
                 armorChangeFlag.push({ _id: item.id, data: originalArmor });
                 // take off armor if it's not wild armor or this is not beast shape from wild shape
                 let equipChange = (armorIsWild && this.source === 'Wild Shape') ? {} : { equipped: false };
-                let armorChange = armorChangeNeeded ? (smallSizes.includes(this.actorSize) ? { armor: { value: item.data.data.armor.value * 2 } } : { armor: { value: Math.floor(item.data.data.armor.value / 2) } }) : {};
+                let armorChange = armorChangeNeeded ? (smallSizes.includes(this.actorSize) ? { armor: { value: item.system.armor.value * 2 } } : { armor: { value: Math.floor(item.system.armor.value / 2) } }) : {};
                 equipChange = mergeObject(equipChange, armorChange);
                 armorToChange.push({ _id: item.id, data: equipChange });
             }
@@ -178,13 +178,13 @@ export class MorphinElementalBody extends FormApplication {
         let originalSkillMod = {};
         let skillModChange = {};
         if (armorChangeNeeded) {
-            originalSkillMod = { 'data.skills.clm.ability': shifter.data.data.skills.clm.ability, 'data.skills.swm.ability': shifter.data.data.skills.swm.ability };
-            skillModChange = { 'data.skills.clm.ability': (smallSizes.includes(this.actorSize) ? 'str' : 'dex'), 'data.skills.swm.ability': (smallSizes.includes(this.actorSize) ? 'str' : 'dex') };
+            originalSkillMod = { 'system.skills.clm.ability': shifter.system.skills.clm.ability, 'system.skills.swm.ability': shifter.system.skills.swm.ability };
+            skillModChange = { 'system.skills.clm.ability': (smallSizes.includes(this.actorSize) ? 'str' : 'dex'), 'system.skills.swm.ability': (smallSizes.includes(this.actorSize) ? 'str' : 'dex') };
         }
 
         // Process speed changes
-        let originalManeuverability = { 'data.attributes.speed.fly.maneuverability': shifter.data.data.attributes.speed.fly.maneuverability };
-        let newSpeeds = duplicate(shifter.data.data.attributes.speed);
+        let originalManeuverability = { 'system.attributes.speed.fly.maneuverability': shifter.system.attributes.speed.fly.maneuverability };
+        let newSpeeds = duplicate(shifter.system.attributes.speed);
         let speedTypes = Object.keys(newSpeeds);
         let maneuverabilityChange = {};
         for (let i = 0; i < speedTypes.length; i++) {
@@ -195,14 +195,14 @@ export class MorphinElementalBody extends FormApplication {
                 speedChange.formula = speed.toString();
                 speedChange.value = speed;
                 if (speedTypes[i] === 'fly') {
-                    maneuverabilityChange = { 'data.attributes.speed.fly.maneuverability': (this.level === 1 ? 'average' : 'good') };
+                    maneuverabilityChange = { 'system.attributes.speed.fly.maneuverability': (this.level === 1 ? 'average' : 'good') };
                 }
             }
             this.changes.push(speedChange);
         }
 
         // Process senses changes
-        let originalSenses = { 'data.traits.senses': shifter.data.data.traits.senses };
+        let originalSenses = { 'system.traits.senses': shifter.system.traits.senses };
         let senseObject = { 'dv': 0, 'ts': 0, 'bs': 0, 'bse': 0, 'll': { 'enabled': false, 'multiplier': { 'dim': 2, 'bright': 2 } }, 'sid': false, 'tr': false, 'si': false, 'sc': false, 'custom': '' };
         for (let i = 0; i < this.senses.length; i++) {
             const sensesEnumValue = this.senses[i];
@@ -210,14 +210,14 @@ export class MorphinElementalBody extends FormApplication {
                 senseObject = mergeObject(senseObject, MorphinChanges.SENSES[Object.keys(MorphinChanges.SENSES)[sensesEnumValue - 1]].setting); // element 1 = SENSES[0] = LOWLIGHT
             }
         }
-        let sensesChanges = { 'data.traits.senses': senseObject };
+        let sensesChanges = { 'system.traits.senses': senseObject };
 
         // Process resistances changes
-        let originalEres = { 'data.traits.eres': shifter.data.data.traits.eres };
+        let originalEres = { 'system.traits.eres': shifter.system.traits.eres };
         let eresString = this.eres || '';
 
         // Process vulnerabilities changes
-        let originalDv = { 'data.traits.dv': shifter.data.data.traits.dv };
+        let originalDv = { 'system.traits.dv': shifter.system.traits.dv };
         let newDv = { value: [], custom: '' };
         if (!!this.dv) {
             for (let i = 0; i < this.dv.length; i++) {
@@ -234,11 +234,11 @@ export class MorphinElementalBody extends FormApplication {
         }
 
         // Process DR changes
-        let originalDr = { 'data.traits.dr': shifter.data.data.traits.dr };
+        let originalDr = { 'system.traits.dr': shifter.system.traits.dr };
         let drString = this.dr || '';
 
         // Process damage immunity changes
-        let originalDi = { 'data.traits.di': shifter.data.data.traits.di };
+        let originalDi = { 'system.traits.di': shifter.system.traits.di };
         let newDi = { value: [], custom: '' };
         if (!!this.di) {
             for (let i = 0; i < this.di.length; i++) {
@@ -256,18 +256,18 @@ export class MorphinElementalBody extends FormApplication {
 
         // replace eres and dv
         originalSenses = mergeObject(originalSenses, mergeObject(originalEres, originalDv));
-        sensesChanges = mergeObject(sensesChanges, mergeObject({ 'data.traits.eres': eresString }, { 'data.traits.dv': newDv }));
+        sensesChanges = mergeObject(sensesChanges, mergeObject({ 'system.traits.eres': eresString }, { 'system.traits.dv': newDv }));
 
         // replace DR if elemental body III or IV
         if (this.level >= 3) {
             originalSenses = mergeObject(originalSenses, originalDr);
-            sensesChanges = mergeObject(sensesChanges, { 'data.traits.dr': drString });
+            sensesChanges = mergeObject(sensesChanges, { 'system.traits.dr': drString });
         }
 
         // replace immunities if ebIV
         if (this.level === 4) {
             originalSenses = mergeObject(originalSenses, originalDi);
-            sensesChanges = mergeObject(sensesChanges, { 'data.traits.di': newDi });
+            sensesChanges = mergeObject(sensesChanges, { 'system.traits.di': newDi });
         }
 
         // Create special ability features
@@ -318,11 +318,11 @@ export class MorphinElementalBody extends FormApplication {
         buff = shifter.items.find(o => o.type === 'buff' && o.name === this.source);
         let buffUpdate = [{ _id: buff.id, 'data.changes': this.changes, 'data.active': true }];
 
-        let dataFlag = mergeObject({ 'data.traits.size': this.actorSize }, mergeObject(originalSkillMod, mergeObject(originalManeuverability, originalSenses)));
+        let dataFlag = mergeObject({ 'system.traits.size': this.actorSize }, mergeObject(originalSkillMod, mergeObject(originalManeuverability, originalSenses)));
         if (!!newImage) { dataFlag = mergeObject(dataFlag, oldProtoImage); };
         let flags = { source: 'Beast Shape', buffName: this.source, data: dataFlag, armor: armorChangeFlag, itemsCreated: itemsCreated };
         if (!!newImage) { flags = mergeObject(flags, { tokenImg: oldImage }); };
-        await shifter.update(mergeObject({ 'data.traits.size': newSize, 'flags.mightyMorphin': flags }, mergeObject(skillModChange, mergeObject(maneuverabilityChange, mergeObject(sensesChanges, protoImageChange)))));
+        await shifter.update(mergeObject({ 'system.traits.size': newSize, 'flags.mightyMorphin': flags }, mergeObject(skillModChange, mergeObject(maneuverabilityChange, mergeObject(sensesChanges, protoImageChange)))));
 
         // update items on the actor
         if (!!armorToChange.length) {
@@ -358,49 +358,49 @@ export class MorphinElementalBody extends FormApplication {
      * @returns {string} HTML containing preview of all the changes to be made to the actor
      */
     async buildPreviewTemplate(chosenForm) {
-        let data = {};
+        let templateData = {};
         this.chosenForm = this.shapeOptions.elemental.find(o => o.name === chosenForm);
 
         // Process stat changes for polymorphing smaller than small or larger than medium
-        data.polymorphBase = '';
+        templateData.polymorphBase = '';
         this.polymorphChanges = MorphinChanges.changes.polymorphSize[this.actorSize] || {};
         if (!!this.polymorphChanges) {
             for (let i = 0; i < this.polymorphChanges.length; i++) {
                 const change = this.polymorphChanges[i];
                 if (change.target === 'ability') {
-                    if (data.polymorphBase.length > 0) {
+                    if (templateData.polymorphBase.length > 0) {
                         // comma between entries
-                        data.polymorphBase += ', ';
+                        templateData.polymorphBase += ', ';
                     }
                     // text output of the stat (capitalized), and a + in front of positive numbers
-                    data.polymorphBase += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
+                    templateData.polymorphBase += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
                 }
             }
         }
 
         // Process stat changes from the spell based on spell level
         let chosenElement = chosenForm.split(' ')[1].toLowerCase();
-        data.scoreChanges = '';
+        templateData.scoreChanges = '';
         this.changes = MorphinChanges.changes.elementalBody[chosenElement][this.chosenForm.size].changes;
         for (let i = 0; i < this.changes.length; i++) {
             const change = this.changes[i];
 
             if (change.target === 'ability') { // stat change
-                if (data.scoreChanges.length > 0) {
-                    data.scoreChanges += ', ';
+                if (templateData.scoreChanges.length > 0) {
+                    templateData.scoreChanges += ', ';
                 }
-                data.scoreChanges += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
+                templateData.scoreChanges += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
             }
             else if (!change.target && change.subTarget == 'nac') { // natural AC change
-                if (data.scoreChanges.length > 0) {
-                    data.scoreChanges += ', ';
+                if (templateData.scoreChanges.length > 0) {
+                    templateData.scoreChanges += ', ';
                 }
-                data.scoreChanges += `Natural AC ${(change.value > 0 ? '+' : '')}${change.value}`;
+                templateData.scoreChanges += `Natural AC ${(change.value > 0 ? '+' : '')}${change.value}`;
             }
         }
 
         // Process changes to speed, limited by maximum the spell level allows
-        data.speedChanges = '';
+        templateData.speedChanges = '';
         this.speeds = duplicate(MorphinChanges.changes[this.chosenForm.name].speed);
         for (let i = 0; i < Object.keys(this.speeds).length; i++) {
             const element = Object.keys(this.speeds)[i];
@@ -433,14 +433,14 @@ export class MorphinElementalBody extends FormApplication {
                 }
             }
 
-            if (data.speedChanges.length > 1) {
-                data.speedChanges += ', ';
+            if (templateData.speedChanges.length > 1) {
+                templateData.speedChanges += ', ';
             }
-            data.speedChanges += `${element} ${this.speeds[element]} ft`;
+            templateData.speedChanges += `${element} ${this.speeds[element]} ft`;
         }
 
         // Process the natural attacks
-        data.attacks = '';
+        templateData.attacks = '';
         let attackList = MorphinChanges.changes[this.chosenForm.name].attacks;
         for (let i = 0; i < attackList.length; i++) {
             const attack = attackList[i];
@@ -462,14 +462,14 @@ export class MorphinElementalBody extends FormApplication {
             if (attack.nonCrit) {
                 damageDice += (!!damageDice.length ? ' plus ' : '') + `${attack.nonCrit[0]} ${attack.nonCrit[1]}`;
             }
-            if (data.attacks.length > 0) {
-                data.attacks += ', ';
+            if (templateData.attacks.length > 0) {
+                templateData.attacks += ', ';
             }
-            data.attacks += `${attack.count > 1 ? attack.count + ' ' : ''}${attack.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
+            templateData.attacks += `${attack.count > 1 ? attack.count + ' ' : ''}${attack.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
         }
 
         // Process special attacks
-        data.specialAttacks = '';
+        templateData.specialAttacks = '';
         let specialAttackList = MorphinChanges.changes[this.chosenForm.name].specialAttack || [];
         for (let i = 0; i < specialAttackList.length; i++) {
             const specialAttack = specialAttackList[i];
@@ -489,18 +489,18 @@ export class MorphinElementalBody extends FormApplication {
             if (specialAttack.nonCrit) {
                 damageDice += (!!damageDice.length ? ' plus ' : '') + `${specialAttack.nonCrit[0]}`;
             }
-            if (data.specialAttacks.length > 0) {
-                data.specialAttacks += ', ';
+            if (templateData.specialAttacks.length > 0) {
+                templateData.specialAttacks += ', ';
             }
-            data.specialAttacks += `${specialAttack.count > 1 ? specialAttack.count + ' ' : ''}${specialAttack.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
+            templateData.specialAttacks += `${specialAttack.count > 1 ? specialAttack.count + ' ' : ''}${specialAttack.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
         }
-        if (!data.specialAttacks.length) {
-            data.specialAttacks = 'None';
+        if (!templateData.specialAttacks.length) {
+            templateData.specialAttacks = 'None';
         }
 
         // Process changes in senses limited by the spell level
         this.senses = duplicate(MorphinChanges.changes[this.chosenForm.name].senses);
-        data.senses = !!this.senses.length ? '' : 'None';
+        templateData.senses = !!this.senses.length ? '' : 'None';
         for (let i = 0; i < this.senses.length; i++) {
             const senseEnumValue = this.senses[i];
             // limit darkvision above 60 when not beast shape iv
@@ -536,56 +536,56 @@ export class MorphinElementalBody extends FormApplication {
             }
 
             if (!!senseEnumValue) {
-                if (data.senses.length > 0) {
-                    data.senses += ', ';
+                if (templateData.senses.length > 0) {
+                    templateData.senses += ', ';
                 }
-                data.senses += `${MorphinChanges.SENSES[Object.keys(MorphinChanges.SENSES)[senseEnumValue - 1]].name}`; // element 1 = SENSES[0] = LOWLIGHT
+                templateData.senses += `${MorphinChanges.SENSES[Object.keys(MorphinChanges.SENSES)[senseEnumValue - 1]].name}`; // element 1 = SENSES[0] = LOWLIGHT
             }
         }
 
         // Process special qualities
-        data.special = 'None';
+        templateData.special = 'None';
         this.special = !!MorphinChanges.changes[this.chosenForm.name].special ? duplicate(MorphinChanges.changes[this.chosenForm.name].special) : [];
         for (let i = 0; i < this.special.length; i++) {
             const element = this.special[i];
 
-            if (data.special === 'None') {
-                data.special = '';
+            if (templateData.special === 'None') {
+                templateData.special = '';
             }
-            if (data.special.length > 0) {
-                data.special += ', ';
+            if (templateData.special.length > 0) {
+                templateData.special += ', ';
             }
-            data.special += element;
+            templateData.special += element;
         }
 
-        data.eres = MorphinChanges.changes[this.chosenForm.name].eres?.join(', ') || 'None';
+        templateData.eres = MorphinChanges.changes[this.chosenForm.name].eres?.join(', ') || 'None';
         this.eres = MorphinChanges.changes[this.chosenForm.name].eres?.join('; ') || '';
 
 
-        data.dv = MorphinChanges.changes[this.chosenForm.name].dv?.join(', ') || 'None';
+        templateData.dv = MorphinChanges.changes[this.chosenForm.name].dv?.join(', ') || 'None';
         this.dv = MorphinChanges.changes[this.chosenForm.name].dv || [];
 
         if (this.level >= 3) {
-            data.di = MorphinChanges.changes[this.chosenForm.name].di?.join(', ') || 'None';
+            templateData.di = MorphinChanges.changes[this.chosenForm.name].di?.join(', ') || 'None';
             this.di = MorphinChanges.changes[this.chosenForm.name].di || [];
         }
 
         if (this.level === 4) {
-            data.dr = MorphinChanges.changes[this.chosenForm.name].dr?.join(', ') || 'None';
+            templateData.dr = MorphinChanges.changes[this.chosenForm.name].dr?.join(', ') || 'None';
             this.dr = MorphinChanges.changes[this.chosenForm.name].dr?.join('; ') || '';
         }
 
-        let newHtml = `${!!data.polymorphBase ? '<p><span class="previewLabel">Base Size Adjust: </span><span id="polymorphScores">' + data.polymorphBase + '</span></p>' : ''}
-            <p><span class="previewLabel">Ability Scores: </span><span id="abilityScores">${data.scoreChanges}</span></p>
-            <p><span class="previewLabel">Attacks: </span><span id="attacks">${data.attacks}</span></p>
-            <p><span class="previewLabel">Special Attacks: </span><span id="specialAttacks">${data.specialAttacks}</span></p>
-            <p><span class="previewLabel">Speeds: </span><span id="speeds">${data.speedChanges}</span></p>
-            <p><span class="previewLabel">Senses: </span><span id="senses">${data.senses}</span></p>
-            <p><span class="previewLabel">Special Abilities: </span><span id="specials">${data.special}</span></p>
-            <p><span class="previewLabel">Energy Resistances: </span><span id="eres">${data.eres}</span></p>
-            <p><span class="previewLabel">Vulnerabilities: </span><span id="dv">${data.dv}</span></p>
-            ${this.level >= 3 ? '<p><span class="previewLabel">Damage Immunities: </span><span id="di">' + data.di + '</span></p>' : ''}
-            ${this.level === 4 ? '<p><span class="previewLabel">Damage Resistances: </span><span id="dr">' + data.dr + '</span></p>' : ''}`;
+        let newHtml = `${!!templateData.polymorphBase ? '<p><span class="previewLabel">Base Size Adjust: </span><span id="polymorphScores">' + templateData.polymorphBase + '</span></p>' : ''}
+            <p><span class="previewLabel">Ability Scores: </span><span id="abilityScores">${templateData.scoreChanges}</span></p>
+            <p><span class="previewLabel">Attacks: </span><span id="attacks">${templateData.attacks}</span></p>
+            <p><span class="previewLabel">Special Attacks: </span><span id="specialAttacks">${templateData.specialAttacks}</span></p>
+            <p><span class="previewLabel">Speeds: </span><span id="speeds">${templateData.speedChanges}</span></p>
+            <p><span class="previewLabel">Senses: </span><span id="senses">${templateData.senses}</span></p>
+            <p><span class="previewLabel">Special Abilities: </span><span id="specials">${templateData.special}</span></p>
+            <p><span class="previewLabel">Energy Resistances: </span><span id="eres">${templateData.eres}</span></p>
+            <p><span class="previewLabel">Vulnerabilities: </span><span id="dv">${templateData.dv}</span></p>
+            ${this.level >= 3 ? '<p><span class="previewLabel">Damage Immunities: </span><span id="di">' + templateData.di + '</span></p>' : ''}
+            ${this.level === 4 ? '<p><span class="previewLabel">Damage Resistances: </span><span id="dr">' + templateData.dr + '</span></p>' : ''}`;
 
         return newHtml;
     }
