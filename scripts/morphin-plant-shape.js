@@ -1,3 +1,4 @@
+import { findImage } from './helpers/index.js';
 import { MightyMorphinApp } from './mighty-morphin.js';
 import { MorphinChanges } from './morphin-changes.js';
 import { MorphinOptions } from './morphin-options.js';
@@ -63,7 +64,11 @@ export class MorphinPlantShape extends FormApplication {
         data.plantOptions = this.shapeOptions.plant.filter(o => o.size === defaultSize);
 
         // Create radio button data for plant sizes, set the one for the default size as the default checked button
-        data.plantSizes = this.sizes.plant.map(o => { return o === defaultSize ? { label: o, size: CONFIG.PF1.actorSizes[o], default: true } : { label: o, size: CONFIG.PF1.actorSizes[o] }; });
+        data.plantSizes = this.sizes.plant.map(o => {
+            return o === defaultSize
+                ? { label: o, size: CONFIG.PF1.actorSizes[o], default: true }
+                : { label: o, size: CONFIG.PF1.actorSizes[o] };
+        });
 
         // Get the plant that will be the first shown in the form dropdown and build the preview of the changes the form will provide
         data.defaultChoice = data.plantOptions[0];
@@ -75,10 +80,10 @@ export class MorphinPlantShape extends FormApplication {
     /**
      * Processes and applies all changes from the passed form to the actor
      * 
-     * @param {object} event The clicked button event
+     * @param {object} _event The clicked button event
      * @param {string} chosenForm The name of the form chosen
      */
-    async applyChanges(event, chosenForm) {
+    async applyChanges(_event, chosenForm) {
         let shifter = game.actors.get(this.actorId);
         let newSize = MorphinChanges.changes[chosenForm].size;
 
@@ -129,7 +134,9 @@ export class MorphinPlantShape extends FormApplication {
         }
 
         // Add base polymorph size stat changes to the spell's normal changes if necessary
-        if (!!this.polymorphChanges.length) this.changes = this.changes.concat(this.polymorphChanges);
+        if (!!this.polymorphChanges.length) {
+            this.changes = this.changes.concat(this.polymorphChanges);
+        }
 
         let buff = shifter.items.find(o => o.type === 'buff' && o.name === this.source);
         // If the buff doesn't already exist on the actor, create it
@@ -155,7 +162,9 @@ export class MorphinPlantShape extends FormApplication {
         for (let i = 0; i < this.changes.length; i++) {
             const change = this.changes[i];
 
-            if (!!change.target && change.target === 'ability' && change.subTarget === 'str') strChange += parseInt(change.formula);
+            if (change.target === 'ability' && change.subTarget === 'str') {
+
+            }
         }
 
         // Set up adjustments to strength carry bonus and carry multiplier so actor's encumbrance doesn't change
@@ -202,11 +211,13 @@ export class MorphinPlantShape extends FormApplication {
         for (let i = 0; i < speedTypes.length; i++) {
             // Find the speed the form gives for the type
             let speed = this.speeds[speedTypes[i]];
-            let speedChange = {formula: '0', operator: 'set', subTarget: speedTypes[i] + 'Speed', modifier: 'base', priority: 100, value: 0};
+            let speedChange = { formula: '0', operator: 'set', subTarget: speedTypes[i] + 'Speed', modifier: 'base', priority: 100, value: 0 };
             if (!!speed) { // if the form has this speed add it
                 speedChange.formula = speed.toString();
                 speedChange.value = speed;
-                if (speedTypes[i] === 'fly') maneuverabilityChange = {'data.attributes.speed.fly.maneuverability': (this.level === 1 ? 'average' : 'good')};
+                if (speedTypes[i] === 'fly') {
+                    maneuverabilityChange = { 'data.attributes.speed.fly.maneuverability': (this.level === 1 ? 'average' : 'good') };
+                }
             }
             this.changes.push(speedChange);
         }
@@ -233,8 +244,12 @@ export class MorphinPlantShape extends FormApplication {
             for (let i = 0; i < this.dv.length; i++) {
                 const element = this.dv[i];
 
-                if (!!CONFIG.PF1.damageTypes[element]) newDv.value.push(element);
-                else newDv.custom += (newDv.custom.length > 0 ? '; ' : '') + element;
+                if (!!CONFIG.PF1.damageTypes[element]) {
+                    newDv.value.push(element);
+                }
+                else {
+                    newDv.custom += (newDv.custom.length > 0 ? '; ' : '') + element;
+                }
             }
         }
 
@@ -285,7 +300,7 @@ export class MorphinPlantShape extends FormApplication {
         }
 
         // Find image to change token to if it exists
-        let newImage = await MightyMorphinApp.findImage(chosenForm);
+        let newImage = await findImage(chosenForm);
 
         // Prepare data for image change
         let oldImage = { img: '' };
@@ -310,18 +325,26 @@ export class MorphinPlantShape extends FormApplication {
 
         // Set the flags for all changes made
         let dataFlag = mergeObject({ 'data.traits.size': this.actorSize }, mergeObject(originalSkillMod, mergeObject(originalManeuverability, originalSenses)));
-        if (!!newImage) { dataFlag = mergeObject(dataFlag, oldProtoImage); };
+        if (!!newImage) {
+            dataFlag = mergeObject(dataFlag, oldProtoImage);
+        };
         let flags = { source: 'Beast Shape', buffName: this.source, data: dataFlag, armor: armorChangeFlag, itemsCreated: itemsCreated };
-        if (!!newImage) { flags = mergeObject(flags, { tokenImg: oldImage }); };
+        if (!!newImage) {
+            flags = mergeObject(flags, { tokenImg: oldImage });
+        };
         await shifter.update(mergeObject({ 'data.traits.size': newSize, 'flags.mightyMorphin': flags }, mergeObject(skillModChange, mergeObject(maneuverabilityChange, mergeObject(sensesChanges, protoImageChange)))));
 
         // update items on the actor
-        if (!!armorToChange.length) await shifter.updateEmbeddedDocuments('Item', armorToChange.concat(buffUpdate));
-        else await shifter.updateEmbeddedDocuments('Item', buffUpdate);
+        if (!!armorToChange.length) {
+            await shifter.updateEmbeddedDocuments('Item', armorToChange.concat(buffUpdate));
+        }
+        else {
+            await shifter.updateEmbeddedDocuments('Item', buffUpdate);
+        }
 
         canvas.tokens.releaseAll();
         canvas.tokens.ownedTokens.find(o => o.data.actorId === this.actorId).control();
-        
+
         await this.close();
     }
 
@@ -354,8 +377,11 @@ export class MorphinPlantShape extends FormApplication {
         if (!!this.polymorphChanges) {
             for (let i = 0; i < this.polymorphChanges.length; i++) {
                 const change = this.polymorphChanges[i];
-                if (!!change.target && change.target === 'ability') {
-                    if (data.polymorphBase.length > 0) data.polymorphBase += ', '; // comma between entries
+                if (change.target === 'ability') {
+                    if (data.polymorphBase.length > 0) {
+                        // comma between entries
+                        data.polymorphBase += ', ';
+                    }
                     // text output of the stat (capitalized), and a + in front of positive numbers
                     data.polymorphBase += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
                 }
@@ -368,12 +394,16 @@ export class MorphinPlantShape extends FormApplication {
         for (let i = 0; i < this.changes.length; i++) {
             const change = this.changes[i];
 
-            if (!!change.target && change.target === 'ability') { // stat change
-                if (data.scoreChanges.length > 0) data.scoreChanges += ', ';
+            if (change.target === 'ability') { // stat change
+                if (data.scoreChanges.length > 0) {
+                    data.scoreChanges += ', ';
+                }
                 data.scoreChanges += `${change.subTarget.charAt(0).toUpperCase()}${change.subTarget.slice(1)} ${(change.value > 0 ? '+' : '')}${change.value}`;
             }
             else if (!change.target && change.subTarget == 'nac') { // natural AC change
-                if (data.scoreChanges.length > 0) data.scoreChanges += ', ';
+                if (data.scoreChanges.length > 0) {
+                    data.scoreChanges += ', ';
+                }
                 data.scoreChanges += `Natural AC ${(change.value > 0 ? '+' : '')}${change.value}`;
             }
         }
@@ -384,7 +414,9 @@ export class MorphinPlantShape extends FormApplication {
         for (let i = 0; i < Object.keys(this.speeds).length; i++) {
             const element = Object.keys(this.speeds)[i];
 
-            if (data.speedChanges.length > 1) data.speedChanges += ', ';
+            if (data.speedChanges.length > 1) {
+                data.speedChanges += ', ';
+            }
             data.speedChanges += `${element} ${this.speeds[element]} ft`;
         }
 
@@ -399,15 +431,23 @@ export class MorphinPlantShape extends FormApplication {
                 for (let j = 0; j < element.special.length; j++) {
                     const specialName = element.special[j];
                     if (MorphinPlantShape.allowedSpecials[this.level].includes(specialName)) {
-                        if (attackSpecial.length > 0) attackSpecial += ', ';
+                        if (attackSpecial.length > 0) {
+                            attackSpecial += ', ';
+                        }
                         attackSpecial += specialName;
                     }
                 }
             }
 
-            let damageDice = element.diceSize === 0 ? '' : `${element.diceCount}d${element.diceSize}`;
-            if (element.nonCrit) damageDice += (!!damageDice.length ? ' plus ' : '') + `${element.nonCrit[0]} ${element.nonCrit[1]}`;
-            if (data.attacks.length > 0) data.attacks += ', ';
+            let damageDice = element.diceSize === 0
+                ? ''
+                : `${element.diceCount}d${element.diceSize}`;
+            if (element.nonCrit) {
+                damageDice += (!!damageDice.length ? ' plus ' : '') + `${element.nonCrit[0]} ${element.nonCrit[1]}`;
+            }
+            if (data.attacks.length > 0) {
+                data.attacks += ', ';
+            }
             data.attacks += `${element.count > 1 ? element.count + ' ' : ''}${element.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
         }
 
@@ -422,7 +462,9 @@ export class MorphinPlantShape extends FormApplication {
             for (let j = 0; j < (element.special?.length || 0); j++) {
                 const special = element.special[j];
 
-                if (!MorphinPlantShape.allowedSpecials[this.level].includes(special)) valid = false;
+                if (!MorphinPlantShape.allowedSpecials[this.level].includes(special)) {
+                    valid = false;
+                }
             }
 
             if (valid) {
@@ -431,19 +473,27 @@ export class MorphinPlantShape extends FormApplication {
                     for (let j = 0; j < element.special.length; j++) {
                         const specialName = element.special[j];
                         if (MorphinPlantShape.allowedSpecials[this.level].includes(specialName)) {
-                            if (attackSpecial.length > 0) attackSpecial += ', ';
+                            if (attackSpecial.length > 0) {
+                                attackSpecial += ', ';
+                            }
                             attackSpecial += specialName;
                         }
                     }
                 }
 
                 let damageDice = element.diceSize === 0 ? '' : `${element.diceCount}d${element.diceSize}`;
-                if (element.nonCrit) damageDice += (!!damageDice.length ? ' plus ' : '') + `${element.nonCrit[0]} ${element.nonCrit[1]}`;
-                if (data.specialAttacks.length > 0) data.specialAttacks += ', ';
+                if (element.nonCrit) {
+                    damageDice += (!!damageDice.length ? ' plus ' : '') + `${element.nonCrit[0]} ${element.nonCrit[1]}`;
+                }
+                if (data.specialAttacks.length > 0) {
+                    data.specialAttacks += ', ';
+                }
                 data.specialAttacks += `${element.count > 1 ? element.count + ' ' : ''}${element.name} (${!!damageDice ? damageDice : '0'}${!!attackSpecial ? ' plus ' + attackSpecial : ''})`;
             }
         }
-        if (!data.specialAttacks.length) data.specialAttacks = 'None';
+        if (!data.specialAttacks.length) {
+            data.specialAttacks = 'None';
+        }
 
         // Process changes in senses limited by the spell level
         this.senses = duplicate(MorphinChanges.changes[this.chosenForm.name].senses);
@@ -451,13 +501,15 @@ export class MorphinPlantShape extends FormApplication {
         for (let i = 0; i < this.senses.length; i++) {
             const element = this.senses[i];
 
-            if (data.senses.length > 0) data.senses += ', ';
+            if (data.senses.length > 0) {
+                data.senses += ', ';
+            }
             data.senses += `${MorphinChanges.SENSES[Object.keys(MorphinChanges.SENSES)[element - 1]].name}`; // element 1 = SENSES[0] = LOWLIGHT
         }
 
         // Process special qualities
         data.special = 'None';
-        this.special = !!MorphinChanges.changes[this.chosenForm.name].special ? duplicate(MorphinChanges.changes[this.chosenForm.name].special) : [];
+        this.special = MorphinChanges.changes[this.chosenForm.name].special || [];
         for (let i = 0; i < this.special.length; i++) {
             const specialName = this.special[i];
 
@@ -467,8 +519,12 @@ export class MorphinPlantShape extends FormApplication {
                 continue;
             }
             else {
-                if (data.special === 'None') data.special = '';
-                if (data.special.length > 0) data.special += ', ';
+                if (data.special === 'None') {
+                    data.special = '';
+                }
+                if (data.special.length > 0) {
+                    data.special += ', ';
+                }
                 data.special += specialName;
             }
         }
